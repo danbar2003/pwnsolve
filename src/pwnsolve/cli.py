@@ -128,6 +128,9 @@ def init_cmd(argv=None):
     args = p.parse_args(argv)
 
     cfg = load_config()
+    if cfg["ssh"]["host"] in ("127.0.0.1", "your.box.example"):
+        print("[!] config still has the placeholder box (host=%s). Set yours:\n"
+              "    solveconfig --edit   (%s)" % (cfg["ssh"]["host"], CONFIG_PATH))
     cwd = os.getcwd()
 
     base, dlibc, dld = _detect_files(cwd)

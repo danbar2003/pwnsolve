@@ -17,9 +17,17 @@ pip install -e .          # into your pwntools venv
 
 ## Configure the box once
 
+`pip install` does **not** create a config file. It is created lazily, with
+placeholder defaults, the first time you run any `solve*` command (or a
+`solve.py`). So the first thing to do on a fresh install is point it at your box:
+
 ```bash
-solveconfig --edit        # ~/.config/pwnsolve/config.toml
+solveconfig --edit        # creates ~/.config/pwnsolve/config.toml (if needed), opens $EDITOR
 ```
+
+The placeholder defaults (`host = "127.0.0.1"`, `user = "user"`) won't connect
+anywhere real — edit `[ssh]` to your VM/server before running a challenge.
+Honors `$XDG_CONFIG_HOME` (otherwise `~/.config`).
 
 ```toml
 [ssh]
