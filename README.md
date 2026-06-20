@@ -40,16 +40,23 @@ debuginfod = "on"         # on => fetch real glibc symbols by build-id (cached);
 
 ```bash
 cd ~/ctf/some_challenge
-solveinit                 # detect binary/libc/ld, write solve.py, sync to the box
-#   solveinit --pwninit   # run pwninit first
+solveinit                 # patch on host (pwninit), write solve.py, push binary+libs
+#   solveinit --no-patch  # use an existing patched binary as-is
 #   solveinit --host 1.2.3.4 --port 31337
 
 python3 solve.py LOCAL    # run on the box, drive I/O locally (no debugger)
 python3 solve.py GDB      # debug via gdbserver, local pwndbg attaches
 python3 solve.py          # connect to the real CTF server
 
-solvesync                 # re-upload after re-patching / editing files
+solvesync                 # re-push binary+libs after re-patching
 ```
+
+Patching happens on the **host** (pwninit/patchelf), and only the **runtime
+files** — the patched binary plus its loader/libc (`ld-*.so`, `libc-*.so`,
+`libc.so.6`) — are pushed to the box. Your `solve.py`, sources, and unpatched
+originals never leave the host; the per-challenge dir on the box is wiped to
+exactly that file set on every push, so the binary loads *your* libc, not the
+box's system libc.
 
 The generated `solve.py` is thin:
 

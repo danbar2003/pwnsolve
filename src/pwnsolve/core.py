@@ -81,7 +81,11 @@ class Challenge:
         return remote(*self.target)
 
     def sync(self, quiet=True):
-        _remote.sync(self.cfg, self.local_dir, self.remote_dir, quiet=quiet)
+        names = _remote.collect_runtime_files(
+            self.local_dir, self.binary,
+            os.path.basename(self.libc.path) if self.libc else None,
+            os.path.basename(self.ld.path) if self.ld else None)
+        _remote.push_files(self.cfg, self.local_dir, self.remote_dir, names, quiet=quiet)
         return self.remote_dir
 
     # -- internals ---------------------------------------------------------
