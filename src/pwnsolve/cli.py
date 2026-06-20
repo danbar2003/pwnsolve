@@ -125,7 +125,12 @@ def init_cmd(argv=None):
                    help="don't run pwninit; use an existing (patched) binary as-is")
     p.add_argument("--no-sync", action="store_true", help="do not upload to the box")
     p.add_argument("--force", action="store_true", help="overwrite an existing solve.py")
+    p.add_argument("--edit", action="store_true",
+                   help="open the pwnsolve config in $EDITOR and exit")
     args = p.parse_args(argv)
+
+    if args.edit:
+        return config_cmd(["--edit"])
 
     cfg = load_config()
     if cfg["ssh"]["host"] in ("127.0.0.1", "your.box.example"):
