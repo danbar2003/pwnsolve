@@ -56,6 +56,15 @@ def run_ssh(cfg, command, **kw):
     return subprocess.run(ssh_base(cfg) + [command], **kw)
 
 
+def capture(cfg, command, timeout=10):
+    """Run a command on the box and return its stdout (empty on failure)."""
+    try:
+        return subprocess.run(ssh_base(cfg) + [command],
+                              capture_output=True, text=True, timeout=timeout).stdout
+    except Exception:
+        return ""
+
+
 def ensure_remote_dir(cfg, remote_dir):
     run_ssh(cfg, "mkdir -p %s" % shlex.quote(remote_dir),
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

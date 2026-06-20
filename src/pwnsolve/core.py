@@ -13,6 +13,7 @@ import atexit
 import shlex
 import shutil
 import tempfile
+import subprocess
 
 from . import remote as _remote
 from . import terminal as _terminal
@@ -108,8 +109,16 @@ class Challenge:
         if self.ld:
             targets.append(shlex.quote("./" + os.path.basename(self.ld.path)))
         chmod = "chmod +x %s" % " ".join(targets)
+        gslog = "/tmp/.pwnsolve-gdbserver-%d.log" % port
         if under_gdbserver:
-            run = "exec gdbserver --once 127.0.0.1:%d %s 2>/dev/null" % (port, binq)
+            # An interrupted prior session can leave gdbserver holding the port on
+            # the box (and a stale -L tunnel locally). Free both before launching.
+            _remote.run_ssh(self.cfg, "fuser -k %d/tcp 2>/dev/null; sleep 0.2; true" % port,
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self._free_local_port(port)
+            # gdbserver's stderr (banner + errors) -> remote log, so the I/O tube
+            # stays clean but startup failures are still recoverable.
+            run = "exec gdbserver --once 127.0.0.1:%d %s 2>%s" % (port, binq, shlex.quote(gslog))
             argv = _remote.ssh_base(self.cfg, "-L", "%d:127.0.0.1:%d" % (port, port)) + \
                 ["%s && %s && %s" % (cd, chmod, run)]
         else:
@@ -122,8 +131,13 @@ class Challenge:
 
         if under_gdbserver:
             time.sleep(1.0)              # let gdbserver bind + the -L tunnel settle
+            if r.poll(block=False) is not None:   # gdbserver died on startup
+                err = _remote.capture(self.cfg, "cat %s 2>/dev/null" % shlex.quote(gslog)).strip()
+                log.error("gdbserver failed to start on the box:\n    %s",
+                          err.replace("\n", "\n    ") or "(no output; check the box manually)")
             self._launch_debugger(port)
-            log.info("%s launching; the binary stays paused until you `continue`.",
+            self._wait_for_attach(port)
+            log.info("%s attached; the binary stays paused until you `continue`.",
                      self.cfg["debug"]["debugger"])
         return r
 
@@ -151,6 +165,57 @@ class Challenge:
                 os.chmod(p, os.stat(p).st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
             except OSError:
                 pass
+
+    def _wait_for_attach(self, port, timeout=120):
+        """Block until the local debugger has connected to gdbserver.
+
+        Prevents the caller from driving (and crashing) the target before the
+        debugger is in. Detected via an ESTABLISHED connection on the forwarded
+        port; falls back to a short sleep if lsof is unavailable.
+        """
+        from pwn import log
+        if not shutil.which("lsof"):
+            time.sleep(3)
+            return False
+        deadline = time.time() + timeout
+        with log.progress("Waiting for %s to attach" % self.cfg["debug"]["debugger"]) as pr:
+            while time.time() < deadline:
+                if self._port_established(port):
+                    pr.success("attached")
+                    return True
+                time.sleep(0.3)
+            pr.failure("timed out after %ds — continuing without confirmation" % timeout)
+        return False
+
+    @staticmethod
+    def _port_established(port):
+        try:
+            out = subprocess.run(["lsof", "-nP", "-iTCP:%d" % port, "-sTCP:ESTABLISHED"],
+                                 capture_output=True, text=True, timeout=5).stdout
+        except Exception:
+            return False
+        return bool(out.strip())
+
+    @staticmethod
+    def _free_local_port(port):
+        """Kill a stale local ssh -L tunnel left listening on ``port``."""
+        if not shutil.which("lsof"):
+            return
+        try:
+            out = subprocess.run(
+                ["lsof", "-nP", "-iTCP:%d" % port, "-sTCP:LISTEN", "-Fpc"],
+                capture_output=True, text=True, timeout=5).stdout
+        except Exception:
+            return
+        pid = None
+        for line in out.splitlines():
+            if line.startswith("p"):
+                pid = line[1:]
+            elif line.startswith("c") and line[1:].startswith("ssh") and pid:
+                try:
+                    os.kill(int(pid), 9)
+                except (OSError, ValueError):
+                    pass
 
     @staticmethod
     def _safe_close(r):
