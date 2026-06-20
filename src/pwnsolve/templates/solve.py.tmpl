@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+#
+# Runs LOCALLY. Only the target binary (+ gdbserver) runs on the remote box.
+#
+#   ./solve.py          -> connect to the real CTF server
+#   ./solve.py LOCAL    -> run the binary on the box, drive its I/O (no debugger)
+#   ./solve.py GDB      -> run under gdbserver on the box, attach a LOCAL debugger
+#
+from pwn import *
+from pwnsolve import Challenge
+
+chal = Challenge(
+    binary={binary!r},
+    libc={libc!r},
+    ld={ld!r},
+    target=({host!r}, {port}),
+    gdbscript="""
+# break *0x...
+continue
+""",
+)
+exe, libc, ld = chal.exe, chal.libc, chal.ld
+context.binary = exe
+
+
+def main():
+    r = chal.conn()
+
+    # good luck pwning :)
+
+    r.interactive()
+
+
+if __name__ == "__main__":
+    main()
