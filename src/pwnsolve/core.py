@@ -125,7 +125,7 @@ class Challenge:
 
     def _launch_debugger(self, port):
         scr = tempfile.NamedTemporaryFile("w", suffix=".gdb", delete=False)
-        scr.write("set debuginfod enabled off\n")
+        scr.write("set debuginfod enabled %s\n" % self.cfg["debug"].get("debuginfod", "on"))
         arch = _GDB_ARCH.get((self.exe.arch, self.exe.bits))
         if arch:
             scr.write("set architecture %s\n" % arch)

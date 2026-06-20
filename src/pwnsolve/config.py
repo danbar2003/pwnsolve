@@ -22,8 +22,12 @@ DEFAULTS = {
     },
     "debug": {
         "gdb_port": 31337,
-        "debugger": "pwndbg",   # pwndbg | gdb | gef | /path/to/debugger
-        "terminal": "auto",     # auto | tmux | iterm | terminal | <terminal program>
+        "debugger": "pwndbg",     # pwndbg | gdb | gef | /path/to/debugger
+        "terminal": "auto",       # auto | tmux | iterm | terminal | <terminal program>
+        # Fetch real glibc debug symbols by build-id (gives main_arena, hooks,
+        # heap structs). Needs network on first use; cached afterwards. Turn
+        # "off" only if the box's libc isn't on a debuginfod server / no network.
+        "debuginfod": "on",
     },
 }
 
@@ -42,6 +46,7 @@ remote_base = "{remote_base}"
 gdb_port = {gdb_port}      # gdbserver port (forwarded to 127.0.0.1 on this machine)
 debugger = "{debugger}"    # pwndbg | gdb | gef | /path/to/debugger
 terminal = "{terminal}"    # auto | tmux | iterm | terminal | <terminal program>
+debuginfod = "{debuginfod}"  # on => fetch real glibc symbols by build-id (cached); off => no network
 """
 
 
