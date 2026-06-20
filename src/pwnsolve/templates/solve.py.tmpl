@@ -18,6 +18,7 @@ chal = Challenge(
 # break *0x...
 continue
 """,
+    # stop_at_start=True,   # halt at entry under pwndbg instead of auto-continuing
 )
 exe, libc, ld = chal.exe, chal.libc, chal.ld
 context.binary = exe

@@ -28,6 +28,10 @@ DEFAULTS = {
         # heap structs). Needs network on first use; cached afterwards. Turn
         # "off" only if the box's libc isn't on a debuginfod server / no network.
         "debuginfod": "on",
+        # on => target halts at entry under the debugger (don't auto-continue),
+        # so you can set up in pwndbg before it runs. Override per-script with
+        # Challenge(stop_at_start=True/False).
+        "stop_at_start": "off",
     },
 }
 
@@ -47,6 +51,7 @@ gdb_port = {gdb_port}      # gdbserver port (forwarded to 127.0.0.1 on this mach
 debugger = "{debugger}"    # pwndbg | gdb | gef | /path/to/debugger
 terminal = "{terminal}"    # auto | tmux | iterm | terminal | <terminal program>
 debuginfod = "{debuginfod}"  # on => fetch real glibc symbols by build-id (cached); off => no network
+stop_at_start = "{stop_at_start}"  # on => GDB halts the target at entry instead of auto-continuing
 """
 
 

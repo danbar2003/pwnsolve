@@ -47,9 +47,14 @@ def _resolve_debugger(name):
     return [name]
 
 
+def _truthy(v):
+    return str(v).strip().lower() in ("1", "on", "true", "yes")
+
+
 class Challenge:
     def __init__(self, binary, libc=None, ld=None, target=None, name=None,
-                 remote_dir=None, gdbscript="", autosync=True, cfg=None):
+                 remote_dir=None, gdbscript="", autosync=True, cfg=None,
+                 stop_at_start=None):
         from pwn import ELF, context
 
         self.cfg = cfg or load_config()
@@ -68,6 +73,10 @@ class Challenge:
         self.remote_dir = remote_dir or "%s/%s" % (base, self.name)
         self.gdbscript = gdbscript
         self.autosync = autosync
+        # When set, the target halts at entry under the debugger instead of
+        # auto-continuing — set up in pwndbg, then `continue` yourself.
+        self.stop_at_start = (_truthy(self.cfg["debug"].get("stop_at_start", "off"))
+                              if stop_at_start is None else bool(stop_at_start))
 
     # -- public ------------------------------------------------------------
     def conn(self):
@@ -150,7 +159,15 @@ class Challenge:
         scr.write("set sysroot %s\n" % self.local_dir)
         scr.write("set solib-search-path %s\n" % self.local_dir)
         scr.write("target remote 127.0.0.1:%d\n" % port)
-        scr.write(self.gdbscript or "")
+        gs = self.gdbscript or ""
+        if self.stop_at_start:
+            # Halt at entry: drop any trailing bare `continue`/`c` so the target
+            # stays paused under the debugger until you continue yourself.
+            import re
+            gs = re.sub(r"(?im)^[ \t]*(continue|cont|c)[ \t]*$",
+                        "# [stop_at_start] \\g<0>", gs)
+            gs += '\necho \\n[pwnsolve] stopped at entry — set up, then `continue`.\\n\n'
+        scr.write(gs)
         scr.flush(); scr.close()
 
         dbg = _resolve_debugger(self.cfg["debug"]["debugger"])

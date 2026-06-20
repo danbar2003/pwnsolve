@@ -42,6 +42,7 @@ gdb_port = 31337
 debugger = "pwndbg"       # pwndbg | gdb | gef | /path/to/debugger
 terminal = "auto"         # auto | tmux | iterm | terminal | <terminal program>
 debuginfod = "on"         # on => fetch real glibc symbols by build-id (cached); off => no network
+stop_at_start = "off"     # on => GDB halts the target at entry instead of auto-continuing
 ```
 
 ## Per challenge
